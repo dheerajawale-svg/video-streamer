@@ -20,9 +20,8 @@ Desktop.ini
 TestResults/
 artifacts/
 
-# Keep bundled FFmpeg binaries in source control
-!ffmpeg/bin/
-!ffmpeg/bin/**
+# Ignore bundled FFmpeg tooling
+ffmpeg/
 
 # User-specific Visual Studio files
 *.suo
