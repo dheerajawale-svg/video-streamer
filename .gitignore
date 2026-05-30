@@ -1,0 +1,63 @@
+# ------------------------------
+# OS / file explorer artifacts
+# ------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ------------------------------
+# Editor / IDE artifacts
+# ------------------------------
+.vs/
+.idea/
+*.code-workspace
+
+# ------------------------------
+# .NET / C# build artifacts
+# ------------------------------
+[Bb]in/
+[Oo]bj/
+TestResults/
+artifacts/
+
+# Keep bundled FFmpeg binaries in source control
+!ffmpeg/bin/
+!ffmpeg/bin/**
+
+# User-specific Visual Studio files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# NuGet package artifacts
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# ------------------------------
+# Logs and temporary runtime files
+# ------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+
+# ------------------------------
+# Environment / local secrets
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------
+# Bicep / ARM generated outputs
+# ------------------------------
+*.bicep.json
+*.bicepparam.json
+
+# ------------------------------
+# Local media assets
+# ------------------------------
+public/
