@@ -33,5 +33,24 @@ The app expects HLS files under `public/local-video`:
 ## Notes
 
 - This workspace is configured for local-only streaming from disk.
-- No cloud deployment scripts or infrastructure files are required.
+
+## Deploy To Azure Container Apps
+
+One command deploy script:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\infra\deploy-hlsserver-containerapp.ps1
+```
+
+Optional dry run (no Azure changes):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\infra\deploy-hlsserver-containerapp.ps1 -DryRun
+```
+
+Notes:
+
+- Defaults match [docs/azure-resources.md](docs/azure-resources.md).
+- The script reads `AZURE_STORAGE_CONNECTION_STRING` first, then falls back to `HlsServer/appsettings.Development.json`.
+- You can override defaults with parameters like `-SubscriptionId`, `-ResourceGroup`, `-ContainerAppName`, and `-ImageTag`.
 
