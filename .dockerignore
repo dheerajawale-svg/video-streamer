@@ -1,0 +1,66 @@
+# =============================================================================
+# .dockerignore — ACR build context for HlsServer
+#
+# The Dockerfile (HlsServer/Dockerfile) only needs the HlsServer/ source tree.
+# Everything else is excluded here to keep the az acr build upload small and fast.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Git & IDE metadata
+# ---------------------------------------------------------------------------
+.git/
+.github/
+.gitignore
+.gitattributes
+**/.vs/
+.vscode/
+.idea/
+
+# ---------------------------------------------------------------------------
+# .NET build artifacts
+# (dotnet restore / publish runs inside the container — local outputs are noise)
+# ---------------------------------------------------------------------------
+**/bin/
+**/obj/
+
+# ---------------------------------------------------------------------------
+# Development-only appsettings (stripped in the Dockerfile already, but
+# excluding it here prevents it from even entering the build context)
+# ---------------------------------------------------------------------------
+HlsServer/appsettings.Development.json
+
+# ---------------------------------------------------------------------------
+# Local HLS media — hundreds of .ts segments + source MP4s
+# These are served at runtime, not baked into the image.
+# ---------------------------------------------------------------------------
+public/
+
+# ---------------------------------------------------------------------------
+# FFmpeg Windows binaries — not needed inside the Linux container image
+# ---------------------------------------------------------------------------
+ffmpeg/
+
+# ---------------------------------------------------------------------------
+# Infrastructure & deployment scripts
+# ---------------------------------------------------------------------------
+infra/
+
+# ---------------------------------------------------------------------------
+# Repo documentation
+# ---------------------------------------------------------------------------
+*.md
+
+# ---------------------------------------------------------------------------
+# Catch-all for large media extensions anywhere in the tree
+# (guards against future files added outside public/)
+# ---------------------------------------------------------------------------
+**/*.mp4
+**/*.m3u8
+**/*.ts
+**/*.ism
+**/*.vtt
+
+# ---------------------------------------------------------------------------
+# Windows executables and pre-compiled binaries
+# ---------------------------------------------------------------------------
+**/*.exe
