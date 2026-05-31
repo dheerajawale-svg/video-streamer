@@ -1,8 +1,23 @@
+using Azure;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var azureConfig = builder.Configuration.GetSection("AzureStorage");
+var connectionString = azureConfig["ConnectionString"]
+    ?? throw new InvalidOperationException("AzureStorage:ConnectionString is required");
+var containerName = azureConfig["Container"]
+    ?? throw new InvalidOperationException("AzureStorage:Container is required");
+var blobPrefix = azureConfig["BlobPrefix"] ?? string.Empty;
+if (blobPrefix.Length > 0 && !blobPrefix.EndsWith('/'))
+{
+    blobPrefix += "/";
+}
+
+builder.Services.AddSingleton(_ => new BlobContainerClient(connectionString, containerName));
 
 var app = builder.Build();
 
@@ -12,23 +27,40 @@ mimeProvider.Mappings[".m3u8"] = "application/vnd.apple.mpegurl";
 mimeProvider.Mappings[".ts"] = "video/mp2t";
 mimeProvider.Mappings[".vtt"] = "text/vtt";
 
-var localVideoRoot = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "public", "local-video"));
-
-string GetContentType(string path) =>
+string GetContentTypeFromMap(string path) =>
     mimeProvider.TryGetContentType(path, out var contentType) ? contentType : "application/octet-stream";
 
 // Health check endpoint
-app.MapGet("/", () =>
+app.MapGet("/", async (BlobContainerClient container) =>
 {
-    var manifestPath = Path.Combine(localVideoRoot, "master.m3u8");
-    var manifestExists = File.Exists(manifestPath);
+    bool containerExists = false;
+    bool manifestExists = false;
+    string? error = null;
+
+    try
+    {
+        containerExists = await container.ExistsAsync();
+        if (containerExists)
+        {
+            manifestExists = await container.GetBlobClient(blobPrefix + "master.m3u8").ExistsAsync();
+        }
+    }
+    catch (RequestFailedException ex)
+    {
+        error = ex.ErrorCode ?? ex.Message;
+    }
 
     return Results.Json(new
     {
-        service = "HLS Video Streamer (Local)",
-        status = manifestExists ? "healthy" : "degraded",
-        mode = "local-filesystem",
-        localRoot = localVideoRoot,
+        service = "HLS Video Streamer (Azure Blob)",
+        status = (containerExists && manifestExists) ? "healthy" : "degraded",
+        mode = "cloud-storage",
+        container = containerName,
+        blobPrefix,
+        accountUri = container.Uri.ToString(),
+        containerExists,
+        manifestExists,
+        error,
         hlsUrl = "/hls/master.m3u8",
         playerUrl = "/player.html",
         markersUrl = "/hls/eeg-markers.vtt",
@@ -37,41 +69,79 @@ app.MapGet("/", () =>
     });
 });
 
-// HLS streaming endpoint: /hls/{path}
-app.MapGet("/hls/{**path}", async (string path, HttpContext context) =>
+// HLS streaming endpoint: /hls/{path} -> blob: {blobPrefix}{path}
+app.MapMethods("/hls/{**path}", new[] { "GET", "HEAD" }, async (string? path, HttpContext context, BlobContainerClient container, ILoggerFactory loggerFactory) =>
 {
+    var log = loggerFactory.CreateLogger("Hls");
+
     if (string.IsNullOrEmpty(path))
     {
         return Results.BadRequest("Path required");
     }
 
-    // Security: prevent directory traversal
-    if (path.Contains("..") || path.StartsWith("/"))
+    // Normalize separators and validate to prevent traversal / absolute paths
+    var normalized = path.Replace('\\', '/').Trim('/');
+    while (normalized.Contains("//", StringComparison.Ordinal))
+    {
+        normalized = normalized.Replace("//", "/");
+    }
+    if (normalized.Length == 0 || normalized.Split('/').Any(s => s == ".." || s == "."))
     {
         return Results.BadRequest("Invalid path");
     }
 
-    var filePath = Path.GetFullPath(Path.Combine(localVideoRoot, path.Replace('/', Path.DirectorySeparatorChar)));
+    var blobName = blobPrefix + normalized;
+    var blobClient = container.GetBlobClient(blobName);
 
-    if (!filePath.StartsWith(localVideoRoot, StringComparison.OrdinalIgnoreCase))
+    try
     {
-        return Results.BadRequest("Invalid path");
+        if (HttpMethods.IsHead(context.Request.Method))
+        {
+            var props = await blobClient.GetPropertiesAsync();
+            WriteHlsHeaders(context.Response, normalized, props.Value.ContentType, props.Value.ContentLength);
+            return Results.Empty;
+        }
+
+        var download = await blobClient.DownloadStreamingAsync();
+        // Set headers only AFTER a successful download so 404/5xx responses
+        // never inherit the long-lived Cache-Control intended for segments.
+        WriteHlsHeaders(context.Response, normalized, download.Value.Details.ContentType, download.Value.Details.ContentLength);
+        using var payload = download.Value;
+        await payload.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+        return Results.Empty;
     }
-
-    if (!File.Exists(filePath))
+    catch (RequestFailedException ex) when (ex.Status == 404)
     {
+        log.LogWarning("Blob not found: {Blob}", blobName);
         return Results.NotFound();
     }
-
-    var contentType = GetContentType(filePath);
-    context.Response.Headers["Access-Control-Allow-Origin"] = "*";
-    context.Response.Headers.Add("Cache-Control", 
-        filePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
-            ? "public, max-age=31536000, immutable"
-            : "public, max-age=300");
-
-    return Results.File(filePath, contentType);
+    catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+    {
+        return Results.Empty;
+    }
+    catch (RequestFailedException ex)
+    {
+        log.LogError(ex, "Azure error fetching {Blob}: {Status} {Code}", blobName, ex.Status, ex.ErrorCode);
+        return Results.Problem(detail: ex.Message, statusCode: ex.Status);
+    }
 });
+
+void WriteHlsHeaders(HttpResponse response, string normalizedPath, string? blobContentType, long contentLength)
+{
+    if (response.HasStarted) return;
+
+    var resolved = !string.IsNullOrWhiteSpace(blobContentType) && blobContentType != "application/octet-stream"
+        ? blobContentType!
+        : GetContentTypeFromMap(normalizedPath);
+
+    response.ContentType = resolved;
+    response.ContentLength = contentLength;
+    response.Headers["Access-Control-Allow-Origin"] = "*";
+    response.Headers["Access-Control-Expose-Headers"] = "Content-Length, Content-Range, Date";
+    response.Headers["Cache-Control"] = normalizedPath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
+        ? "public, max-age=31536000, immutable"
+        : "public, max-age=30";
+}
 
 // Static player HTML
 app.MapGet("/player", () => Results.Redirect("/player.html"));
@@ -132,8 +202,9 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 Console.WriteLine($"HLS Streamer starting...");
-Console.WriteLine($"  Mode: Local filesystem");
-Console.WriteLine($"  Local root: {localVideoRoot}");
+Console.WriteLine($"  Mode: Cloud storage (Azure Blob)");
+Console.WriteLine($"  Container: {containerName}");
+Console.WriteLine($"  Blob prefix: {blobPrefix}");
 Console.WriteLine($"  Listen: http://+:5050");
 
 app.Run("http://+:5050");
