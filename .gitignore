@@ -50,6 +50,9 @@ logs/
 .env.*
 !.env.example
 
+# ASP.NET local secrets / developer overrides (never commit)
+HlsServer/appsettings.Development.json
+
 # ------------------------------
 # Bicep / ARM generated outputs
 # ------------------------------
