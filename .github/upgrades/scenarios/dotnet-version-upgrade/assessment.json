@@ -1,0 +1,142 @@
+{
+  "settings": {
+    "components": {
+      "code": true,
+      "binaries": false
+    },
+    "targetId": "net10.0",
+    "targetDisplayName": ".NETCoreApp,Version=v10.0"
+  },
+  "analysisStartTime": "2026-05-31T13:30:09.1310866Z",
+  "analysisEndTime": "2026-05-31T13:30:10.2010033Z",
+  "privacyModeHelpUrl": "https://go.microsoft.com/fwlink/?linkid=2270980",
+  "stats": {
+    "summary": {
+      "projects": 1,
+      "issues": 2,
+      "incidents": 2,
+      "effort": 2
+    },
+    "charts": {
+      "severity": {
+        "Mandatory": 1,
+        "Optional": 0,
+        "Potential": 1,
+        "Information": 0
+      },
+      "category": {
+        "Project": 1,
+        "Api": 1
+      }
+    }
+  },
+  "projects": [
+    {
+      "path": "HlsServer.csproj",
+      "startingProject": true,
+      "issues": 2,
+      "storyPoints": 2,
+      "properties": {
+        "appName": "HlsServer",
+        "projectKind": "AspNetCore",
+        "frameworks": [
+          "net8.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "numberOfFiles": 4,
+        "numberOfCodeFiles": 1,
+        "linesTotal": 747,
+        "linesOfCode": 210,
+        "totalApiScanned": 281,
+        "minLinesOfCodeToChange": 1,
+        "maxLinesOfCodeToChange": 1
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "ff494742-ca80-4486-892e-8e4cf47b34ad",
+          "ruleId": "Project.0002",
+          "projectPath": "HlsServer.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net8.0\nRecommended target framework: net10.0",
+              "protected": "Current target framework: net8.0\nRecommended target framework: net10.0"
+            },
+            "kind": "File",
+            "path": "HlsServer.csproj",
+            "snippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "protectedSnippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "properties": {
+              "CurrentTargetFramework": "net8.0",
+              "RecommendedTargetFramework": "net10.0"
+            }
+          }
+        },
+        {
+          "incidentId": "35056760-f8e9-44c8-a2c8-f89e57836fab",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "HlsServer.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return Results.Json(new\r\n    {\r\n        service = \u0022HLS Video Streamer (Azure Blob)\u0022,\r\n        status = (containerExists \u0026\u0026 manifestExists) ? \u0022healthy\u0022 : \u0022degraded\u0022,\r\n        mode = \u0022cloud-storage\u0022,\r\n        container = containerName,\r\n        blobPrefix,\r\n        accountUri = container.Uri.ToString(),\r\n        containerExists,\r\n        manifestExists,\r\n        error,\r\n        hlsUrl = \u0022/hls/master.m3u8\u0022,\r\n        playerUrl = \u0022/player.html\u0022,\r\n        markersUrl = \u0022/hls/eeg-markers.vtt\u0022,\r\n        variants = new[] { \u0022240p\u0022, \u0022360p\u0022, \u0022480p\u0022, \u0022720p\u0022, \u00221080p\u0022 },\r\n        timestamp = DateTime.UtcNow\r\n    });",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "Program.cs",
+            "snippet": "return Results.Json(new\r\n    {\r\n        service = \u0022HLS Video Streamer (Azure Blob)\u0022,\r\n        status = (containerExists \u0026\u0026 manifestExists) ? \u0022healthy\u0022 : \u0022degraded\u0022,\r\n        mode = \u0022cloud-storage\u0022,\r\n        container = containerName,\r\n        blobPrefix,\r\n        accountUri = container.Uri.ToString(),\r\n        containerExists,\r\n        manifestExists,\r\n        error,\r\n        hlsUrl = \u0022/hls/master.m3u8\u0022,\r\n        playerUrl = \u0022/player.html\u0022,\r\n        markersUrl = \u0022/hls/eeg-markers.vtt\u0022,\r\n        variants = new[] { \u0022240p\u0022, \u0022360p\u0022, \u0022480p\u0022, \u0022720p\u0022, \u00221080p\u0022 },\r\n        timestamp = DateTime.UtcNow\r\n    });",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 52,
+            "column": 4
+          }
+        }
+      ],
+      "features": []
+    }
+  ],
+  "rules": {
+    "Project.0002": {
+      "id": "Project.0002",
+      "isFeature": false,
+      "description": "Project\u0027s target framework(s) needs to be changed to the new target framework that you selected for this upgrade.\n\nDuring upgrade target framework will be adjusted to corresponding platform when applicable. In some cases project would result in multiple target frameworks after the upgrade if it was using features that now have their own platforms in modern .NET frameworks (windows, iOS, Android etc).",
+      "label": "Project\u0027s target framework(s) needs to be changed",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Overview of porting from .NET Framework to .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265227",
+          "isCustom": false
+        },
+        {
+          "title": ".NET project SDKs",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265226",
+          "isCustom": false
+        }
+      ]
+    },
+    "Api.0003": {
+      "id": "Api.0003",
+      "isFeature": false,
+      "description": "API has a behavioral change in selected .NET version: code and binaries may behave differently at runtime without needing recompilation, but the new behavior might be undesirable and require updates.",
+      "label": "Behavioral change in selected .NET version",
+      "severity": "Potential",
+      "effort": 1
+    }
+  }
+}
