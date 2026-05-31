@@ -63,3 +63,8 @@ HlsServer/appsettings.Development.json
 # Local media assets
 # ------------------------------
 public/
+
+# ------------------------------
+# Documentation / generated docs
+# ------------------------------
+docs/
